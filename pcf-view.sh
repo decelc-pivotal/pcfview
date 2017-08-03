@@ -1,37 +1,37 @@
 #!/bin/bash
-usage="$(basename "$0") [-h] [-u] [-n] [-p] -- program to 
+usage="$(basename "$0") [-h] [-d] [-n] [-p] -- program to 
 
 where:
-    -u  host of uaa
+    -d  domain (i.e. run.pivotal.io)
     -n  Username
     -p  Password"
 	
 DATE=`date +"%T-%m:%d:%Y"`
 
-while getopts h:u:p:n: option
+while getopts h:d:p:n: option
 do
         case "${option}"
         in
                 h) echo "$usage"
                    exit;;
-                u) HOST=${OPTARG};;
+                d) DOMAIN=${OPTARG};;
                 n) USERNAME=${OPTARG};;
                 p) PASSWORD=${OPTARG};;
         esac
 done
 
-echo $HOST
+echo $DOMAIN
 echo $USERNAME
 #echo $PASSWORD
 echo "###################################################################################"
-echo "# Getting PCF application for $HOST as $USERNAME"
+echo "# Getting PCF application for $DOMAIN as $USERNAME"
 echo "###################################################################################"
-TOKEN=`curl -s -k --insecure -H 'Accept: application/json;charset=utf-8' -d 'grant_type=password' -d 'username='"$USERNAME"'' -d 'password='"$PASSWORD"'' -u 'cf:' https://login.$HOST/oauth/token | jq -r .access_token`
+TOKEN=`curl -s -k --insecure -H 'Accept: application/json;charset=utf-8' -d 'grant_type=password' -d 'username='"$USERNAME"'' -d 'password='"$PASSWORD"'' -u 'cf:' https://login.$DOMAIN/oauth/token | jq -r .access_token`
 #echo $TOKEN
 echo "Getting token"
 
 #List all organizations
-ORGS=`curl -s -k --insecure -H 'Accept: application/json;charset=utf-8' "https://api.$HOST/v2/organizations" -X GET -H "Authorization: bearer $TOKEN" -H "Host: api.$HOST" -H "Cookie: " |  jq -r '.resources '`
+ORGS=`curl -s -k --insecure -H 'Accept: application/json;charset=utf-8' "https://api.$DOMAIN/v2/organizations" -X GET -H "Authorization: bearer $TOKEN" -H "Host: api.$DOMAIN" -H "Cookie: " |  jq -r '.resources '`
 SPACES=""
 APPS=""
 
@@ -41,7 +41,7 @@ while read i; do
 	ORG_NAME=`echo $i | jq -r '.entity.name'`
 	#echo $ORG_GUID
 	echo $ORG_NAME
-	SPACES+=`curl -s -k --insecure -H 'Accept: application/json;charset=utf-8' "https://api.$HOST/v2/organizations/$ORG_GUID/spaces" -X GET -H "Authorization: bearer $TOKEN" -H "Host: api.$HOST" -H "Cookie: " |  jq --arg org_guid "$ORG_GUID" --arg org_name "$ORG_NAME"  '.resources[] | [{name: .entity.name, guid: .metadata.guid, created_at: .metadata.created_at, org_guid: $org_guid, org_name: $org_name}] []'`
+	SPACES+=`curl -s -k --insecure -H 'Accept: application/json;charset=utf-8' "https://api.$DOMAIN/v2/organizations/$ORG_GUID/spaces" -X GET -H "Authorization: bearer $TOKEN" -H "Host: api.$DOMAIN" -H "Cookie: " |  jq --arg org_guid "$ORG_GUID" --arg org_name "$ORG_NAME"  '.resources[] | [{name: .entity.name, guid: .metadata.guid, created_at: .metadata.created_at, org_guid: $org_guid, org_name: $org_name}] []'`
 	#echo $SPACES
 done < <(echo $ORGS | jq -c '.[]')
 
@@ -51,7 +51,7 @@ while read k; do
 	ORG_GUID=`echo $k | jq -r '.org_guid'`
 	ORG_NAME=`echo $k | jq -r '.org_name'`
 	echo "Getting apps for - $SPACE_NAME [$ORG_NAME]"
-	APPS+=`curl -s -k --insecure -H 'Accept: application/json;charset=utf-8' "https://api.$HOST/v2/spaces/$SPACE_GUID/apps" -X GET -H "Authorization: bearer $TOKEN" -H "Host: api.$HOST" -H "Cookie: " |  jq --arg org_guid "$ORG_GUID" --arg org_name "$ORG_NAME"  --arg space_guid "$SPACE_GUID" --arg space_name "$SPACE_NAME" '.resources[] | [{name: .entity.name, guid: .metadata.guid, state: .entity.state, instances: .entity.instances, memory: .entity.memory, disk_quota: .entity.disk_quota, created_at: .metadata.created_at, org_guid: $org_guid, org_name: $org_name, space_guid: $space_guid, space_name: $space_name}] []'`
+	APPS+=`curl -s -k --insecure -H 'Accept: application/json;charset=utf-8' "https://api.$DOMAIN/v2/spaces/$SPACE_GUID/apps" -X GET -H "Authorization: bearer $TOKEN" -H "Host: api.$DOMAIN" -H "Cookie: " |  jq --arg org_guid "$ORG_GUID" --arg org_name "$ORG_NAME"  --arg space_guid "$SPACE_GUID" --arg space_name "$SPACE_NAME" '.resources[] | [{name: .entity.name, guid: .metadata.guid, state: .entity.state, instances: .entity.instances, memory: .entity.memory, disk_quota: .entity.disk_quota, created_at: .metadata.created_at, org_guid: $org_guid, org_name: $org_name, space_guid: $space_guid, space_name: $space_name}] []'`
 	#echo $APPS
 done < <(echo $SPACES | jq -c '.')
 	

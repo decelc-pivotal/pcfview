@@ -7,11 +7,11 @@ Requirements - jq must be installed - https://stedolan.github.io/jq/
 Usage
 
 where:
-    -u  host of uaa
+    -d  domian (i.e. run.pivotal.io)
     -n  Username
     -p  Password"
 
-./pcf-view.sh -u run.pivotal.io -n username@pivotal.io -p ##########
+./pcf-view.sh -d run.pivotal.io -n username@pivotal.io -p ##########
 
 Example output
 
